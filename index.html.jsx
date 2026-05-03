@@ -1,5 +1,183 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+// ─── Firebase Config ───────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDOCOQmSTH6mkoKLtWewu8GTBGow-HDY9U",
+  authDomain: "dvsobt-pm.firebaseapp.com",
+  projectId: "dvsobt-pm",
+  storageBucket: "dvsobt-pm.firebasestorage.app",
+  messagingSenderId: "628876188915",
+  appId: "1:628876188915:web:79cedca8cba71112c7eb86",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const DOC_REF = doc(db, "projects", "devsorbit_pm");
+
+// ─── Credentials (mapped to Firebase Email Auth) ──────────────────────────────
+// Firebase Auth uses email format, so username "admin" → "admin@devsorbit.app"
+const ADMIN_EMAIL = "admin@devsorbit.app";
+
+// ─── Login Screen Component ───────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError]       = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [showPass, setShowPass] = useState(false);
+
+  const handleLogin = async () => {
+    if (!username.trim() || !password.trim()) {
+      setError("Username এবং Password দাও।");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      // Map username → email format for Firebase Auth
+      const email = `${username.trim().toLowerCase()}@devsorbit.app`;
+      await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged will call onLogin automatically
+    } catch (err) {
+      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        setError("Username বা Password ভুল।");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("অনেকবার চেষ্টা করেছ। কিছুক্ষণ পর আবার try করো।");
+      } else {
+        setError("Login হয়নি। আবার চেষ্টা করো।");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "#0a0a0f",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: "'Segoe UI', system-ui, sans-serif",
+      padding: "20px",
+    }}>
+      <div style={{
+        width: "100%",
+        maxWidth: "400px",
+        background: "#111122",
+        border: "1px solid #1e1e3a",
+        borderRadius: "16px",
+        padding: "40px 32px",
+        boxShadow: "0 24px 64px #000a",
+      }}>
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: "32px" }}>
+          <div style={{ fontSize: "40px", marginBottom: "8px" }}>🚀</div>
+          <div style={{ fontSize: "22px", fontWeight: "800", color: "#00d4ff", letterSpacing: "-0.5px" }}>Devs Orbit PM</div>
+          <div style={{ fontSize: "12px", color: "#555", marginTop: "4px" }}>Facebook Ad Project Tracker</div>
+        </div>
+
+        {/* Username */}
+        <div style={{ marginBottom: "16px" }}>
+          <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px", fontWeight: "600" }}>USERNAME</div>
+          <input
+            style={{
+              width: "100%",
+              background: "#0d0d1a",
+              border: `1px solid ${error ? "#e9456044" : "#2a2a4a"}`,
+              borderRadius: "10px",
+              padding: "12px 14px",
+              color: "#e8e8f0",
+              fontSize: "15px",
+              outline: "none",
+              boxSizing: "border-box",
+              transition: "border 0.2s",
+            }}
+            placeholder="admin"
+            value={username}
+            onChange={e => { setUsername(e.target.value); setError(""); }}
+            onKeyDown={e => e.key === "Enter" && handleLogin()}
+            autoComplete="username"
+          />
+        </div>
+
+        {/* Password */}
+        <div style={{ marginBottom: "24px" }}>
+          <div style={{ fontSize: "12px", color: "#666", marginBottom: "6px", fontWeight: "600" }}>PASSWORD</div>
+          <div style={{ position: "relative" }}>
+            <input
+              style={{
+                width: "100%",
+                background: "#0d0d1a",
+                border: `1px solid ${error ? "#e9456044" : "#2a2a4a"}`,
+                borderRadius: "10px",
+                padding: "12px 44px 12px 14px",
+                color: "#e8e8f0",
+                fontSize: "15px",
+                outline: "none",
+                boxSizing: "border-box",
+                transition: "border 0.2s",
+              }}
+              type={showPass ? "text" : "password"}
+              placeholder="••••••"
+              value={password}
+              onChange={e => { setPassword(e.target.value); setError(""); }}
+              onKeyDown={e => e.key === "Enter" && handleLogin()}
+              autoComplete="current-password"
+            />
+            <button
+              onClick={() => setShowPass(p => !p)}
+              style={{
+                position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)",
+                background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: "#555", padding: "4px",
+              }}
+            >{showPass ? "🙈" : "👁️"}</button>
+          </div>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div style={{
+            background: "#e9456018", border: "1px solid #e9456044",
+            borderRadius: "8px", padding: "10px 14px",
+            color: "#e94560", fontSize: "13px", marginBottom: "16px",
+          }}>⚠️ {error}</div>
+        )}
+
+        {/* Login Button */}
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          style={{
+            width: "100%",
+            padding: "13px",
+            borderRadius: "10px",
+            border: "none",
+            background: loading ? "#00d4ff88" : "linear-gradient(135deg, #00d4ff, #0096cc)",
+            color: "#0a0a0f",
+            fontSize: "15px",
+            fontWeight: "800",
+            cursor: loading ? "not-allowed" : "pointer",
+            transition: "all 0.2s",
+            letterSpacing: "0.3px",
+          }}
+        >
+          {loading ? "⏳ Logging in..." : "Login →"}
+        </button>
+
+        <div style={{ textAlign: "center", marginTop: "20px", fontSize: "11px", color: "#333" }}>
+          Secured by Firebase Authentication
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Initial Data ──────────────────────────────────────────────────────────────
 const initialData = {
   project: {
     name: "Devs Orbit — Facebook Ad Project",
@@ -279,15 +457,44 @@ function getProgress(tasks) {
   return Math.round((tasks.filter((t) => t.done).length / tasks.length) * 100);
 }
 
-export default function DevOrbPM() {
-  const [data, setData] = useState(() => {
-    try {
-      const saved = localStorage.getItem("devsorbit_pm");
-      return saved ? JSON.parse(saved) : initialData;
-    } catch {
-      return initialData;
-    }
-  });
+// ─── Root Component with Auth Gate ────────────────────────────────────────────
+export default function AppRoot() {
+  const [authState, setAuthState] = useState("checking");
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setAuthState(user ? "loggedIn" : "loggedOut");
+    });
+    return () => unsub();
+  }, []);
+
+  if (authState === "checking") {
+    return (
+      <div style={{
+        minHeight: "100vh", background: "#0a0a0f", display: "flex",
+        alignItems: "center", justifyContent: "center",
+        color: "#00d4ff", fontFamily: "'Segoe UI', system-ui, sans-serif",
+        fontSize: "16px", gap: "12px",
+      }}>
+        <div style={{ fontSize: "28px" }}>🚀</div>
+        <div>Loading Devs Orbit PM...</div>
+      </div>
+    );
+  }
+
+  if (authState === "loggedOut") {
+    return <LoginScreen />;
+  }
+
+  return <DevOrbPM />;
+}
+
+function DevOrbPM() {
+  const [data, setData] = useState(initialData);
+  const [syncStatus, setSyncStatus] = useState("connecting");
+  const isSavingRef = useRef(false);
+  const unsubscribeRef = useRef(null);
+
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedDay, setSelectedDay] = useState(null);
   const [editingProject, setEditingProject] = useState(false);
@@ -301,11 +508,49 @@ export default function DevOrbPM() {
   const [showAddCampaign, setShowAddCampaign] = useState(false);
   const [editProjectData, setEditProjectData] = useState(null);
 
+  // ── Firestore realtime listener ──────────────────────────────────────────────
   useEffect(() => {
-    try {
-      localStorage.setItem("devsorbit_pm", JSON.stringify(data));
-    } catch {}
-  }, [data]);
+    setSyncStatus("connecting");
+    const unsub = onSnapshot(
+      DOC_REF,
+      (snap) => {
+        if (snap.exists()) {
+          const remoteData = snap.data();
+          if (!isSavingRef.current) {
+            setData(remoteData);
+          }
+          setSyncStatus("synced");
+        } else {
+          // First time — push initialData to Firestore
+          setDoc(DOC_REF, initialData)
+            .then(() => setSyncStatus("synced"))
+            .catch(() => setSyncStatus("error"));
+        }
+      },
+      () => setSyncStatus("error")
+    );
+    unsubscribeRef.current = unsub;
+    return () => unsub();
+  }, []);
+
+  // ── Save to Firestore on every data change ────────────────────────────────────
+  useEffect(() => {
+    if (syncStatus === "connecting") return;
+    isSavingRef.current = true;
+    setSyncStatus("saving");
+    const timeout = setTimeout(() => {
+      setDoc(DOC_REF, data)
+        .then(() => {
+          setSyncStatus("synced");
+          isSavingRef.current = false;
+        })
+        .catch(() => {
+          setSyncStatus("error");
+          isSavingRef.current = false;
+        });
+    }, 600); // debounce 600ms
+    return () => clearTimeout(timeout);
+  }, [data]); // eslint-disable-line
 
   const totalBudgetUSD = data.campaigns.reduce((sum, c) => {
     const days = Math.ceil((new Date(c.endDate) - new Date(c.startDate)) / 86400000) + 1;
@@ -622,6 +867,14 @@ export default function DevOrbPM() {
     divider: { height: "1px", background: "#1e1e3a", margin: "16px 0" },
   };
 
+  // ── Sync status indicator ────────────────────────────────────────────────────
+  const syncIndicator = {
+    connecting: { color: "#f5a623", text: "⏳ Connecting..." },
+    synced:     { color: "#52b788", text: "✅ Synced" },
+    saving:     { color: "#00d4ff", text: "💾 Saving..." },
+    error:      { color: "#e94560", text: "❌ Sync Error" },
+  }[syncStatus];
+
   const renderDashboard = () => (
     <div>
       {/* Project Info */}
@@ -850,7 +1103,6 @@ export default function DevOrbPM() {
               <button style={s.btnSm("#e94560")} onClick={() => deleteDay(selectedDay)}>🗑️</button>
             </div>
 
-            {/* Edit day title */}
             <div style={{ marginBottom: "12px" }}>
               <div style={s.label}>Edit Title</div>
               <input
@@ -1170,6 +1422,34 @@ export default function DevOrbPM() {
         <div>
           <div style={s.logo}>🚀 Devs Orbit PM</div>
           <div style={s.logoSub}>Facebook Ad Project Tracker</div>
+        </div>
+        {/* Sync Status + Logout */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{
+            fontSize: "11px",
+            fontWeight: "700",
+            color: syncIndicator.color,
+            background: syncIndicator.color + "18",
+            border: `1px solid ${syncIndicator.color}44`,
+            padding: "4px 10px",
+            borderRadius: "6px",
+            letterSpacing: "0.3px",
+          }}>
+            {syncIndicator.text}
+          </div>
+          <button
+            onClick={() => signOut(auth)}
+            style={{
+              padding: "4px 12px",
+              borderRadius: "6px",
+              border: "1px solid #e9456044",
+              background: "#e9456011",
+              color: "#e94560",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: "700",
+            }}
+          >⎋ Logout</button>
         </div>
         <div style={s.tabs}>
           {tabs.map(t => (
