@@ -210,9 +210,153 @@
   .fs12 { font-size: 12px; }
   .fs11 { font-size: 11px; }
   .f700 { font-weight: 700; }
+
+  /* ── LOGIN SCREEN ── */
+  #login-screen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  #login-screen.hidden { display: none; }
+
+  .login-bg-glow {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+  }
+  .glow-orb {
+    position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.15;
+  }
+  .glow-orb-1 { width: 400px; height: 400px; background: #00d4ff; top: -100px; left: -100px; }
+  .glow-orb-2 { width: 300px; height: 300px; background: #c77dff; bottom: -80px; right: -80px; }
+  .glow-orb-3 { width: 200px; height: 200px; background: #52b788; bottom: 100px; left: 30%; }
+
+  .login-box {
+    position: relative; z-index: 1;
+    background: rgba(17,17,34,0.9);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 40px 36px;
+    width: 100%; max-width: 400px;
+    box-shadow: 0 0 60px rgba(0,212,255,0.08), 0 32px 64px rgba(0,0,0,0.5);
+    backdrop-filter: blur(12px);
+    animation: loginFadeIn 0.5s ease;
+  }
+  @keyframes loginFadeIn {
+    from { opacity:0; transform: translateY(20px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+
+  .login-logo {
+    text-align: center; margin-bottom: 28px;
+  }
+  .login-logo-icon {
+    font-size: 36px; margin-bottom: 8px; display: block;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50%      { transform: scale(1.08); }
+  }
+  .login-logo-title {
+    font-size: 22px; font-weight: 800; color: var(--cyan);
+    font-family: var(--mono); letter-spacing: -0.5px;
+  }
+  .login-logo-sub {
+    font-size: 12px; color: var(--text3); margin-top: 4px;
+  }
+
+  .login-divider {
+    height: 1px; background: linear-gradient(90deg, transparent, var(--border2), transparent);
+    margin: 20px 0;
+  }
+
+  .login-field { margin-bottom: 16px; }
+  .login-label {
+    display: block; font-size: 11px; font-weight: 600;
+    color: var(--text3); margin-bottom: 6px; letter-spacing: 0.5px;
+    text-transform: uppercase; font-family: var(--mono);
+  }
+  .login-input {
+    width: 100%; padding: 12px 16px;
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 10px; color: var(--text);
+    font-size: 15px; font-family: var(--font); outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .login-input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+  }
+
+  .login-btn {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    border: none; border-radius: 10px;
+    color: #0a0a0f; font-size: 15px; font-weight: 800;
+    font-family: var(--font); cursor: pointer;
+    transition: all 0.2s; margin-top: 8px;
+    letter-spacing: 0.3px;
+  }
+  .login-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,212,255,0.3); }
+  .login-btn:active { transform: translateY(0); }
+
+  .login-error {
+    color: var(--red); font-size: 12px; text-align: center;
+    margin-top: 12px; display: none; font-weight: 600;
+    animation: shake 0.3s ease;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25%      { transform: translateX(-6px); }
+    75%      { transform: translateX(6px); }
+  }
+
+  /* App wrapper hidden until login */
+  #app-wrapper { display: none; }
+  #app-wrapper.visible { display: block; }
+
+  /* Logout button in header */
+  .logout-btn {
+    padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border2);
+    background: transparent; color: var(--text2); cursor: pointer;
+    font-size: 12px; font-family: var(--font); font-weight: 600;
+    transition: all 0.2s;
+  }
+  .logout-btn:hover { border-color: var(--red); color: var(--red); }
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-bg-glow">
+    <div class="glow-orb glow-orb-1"></div>
+    <div class="glow-orb glow-orb-2"></div>
+    <div class="glow-orb glow-orb-3"></div>
+  </div>
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="login-logo-icon">🚀</span>
+      <div class="login-logo-title">Devs Orbit PM</div>
+      <div class="login-logo-sub">Facebook Ad Project Tracker</div>
+    </div>
+    <div class="login-divider"></div>
+    <div class="login-field">
+      <label class="login-label" for="login-user">Username</label>
+      <input class="login-input" id="login-user" type="text" placeholder="Enter username" autocomplete="username" />
+    </div>
+    <div class="login-field">
+      <label class="login-label" for="login-pass">Password</label>
+      <input class="login-input" id="login-pass" type="password" placeholder="Enter password" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter') doLogin()" />
+    </div>
+    <button class="login-btn" onclick="doLogin()">🔐 Login</button>
+    <div class="login-error" id="login-error">❌ Incorrect username or password</div>
+  </div>
+</div>
+
+<!-- APP WRAPPER -->
+<div id="app-wrapper">
 
 <!-- HEADER -->
 <div id="header">
@@ -227,6 +371,7 @@
     <button class="tab" data-tab="leads">💬 Leads</button>
     <button class="tab" data-tab="notes">📝 Notes</button>
   </div>
+  <button class="logout-btn" onclick="doLogout()">⏻ Logout</button>
 </div>
 
 <!-- MAIN -->
@@ -437,6 +582,8 @@
     </div>
   </div>
 </div>
+
+</div><!-- /app-wrapper -->
 
 <script>
 /* ════════════════════════════════════════
@@ -1129,6 +1276,47 @@ function renderAll() {
 }
 
 renderAll();
+
+/* ════════════════════════════════════════
+   LOGIN SYSTEM
+════════════════════════════════════════ */
+const CREDENTIALS = { username: 'admin', password: '1234' };
+
+function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+
+  if (user === CREDENTIALS.username && pass === CREDENTIALS.password) {
+    sessionStorage.setItem('devsorbit_auth', '1');
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-wrapper').classList.add('visible');
+    errEl.style.display = 'none';
+  } else {
+    errEl.style.display = 'block';
+    errEl.style.animation = 'none';
+    // retrigger animation
+    void errEl.offsetWidth;
+    errEl.style.animation = '';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-pass').focus();
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('devsorbit_auth');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('app-wrapper').classList.remove('visible');
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+// Auto-login if session active
+if (sessionStorage.getItem('devsorbit_auth') === '1') {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-wrapper').classList.add('visible');
+}
 </script>
 </body>
 </html>
