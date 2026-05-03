@@ -5,6 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>🚀 Devs Orbit PM — Facebook Ad Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDOCOQmSTH6mkoKLtWewu8GTBGow-HDY9U",
+    authDomain: "dvsobt-pm.firebaseapp.com",
+    projectId: "dvsobt-pm",
+    storageBucket: "dvsobt-pm.firebasestorage.app",
+    messagingSenderId: "628876188915",
+    appId: "1:628876188915:web:79cedca8cba71112c7eb86"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const DOC_REF = doc(db, "pm_data", "main");
+
+  window._fbGetDoc = () => getDoc(DOC_REF);
+  window._fbSetDoc = (d) => setDoc(DOC_REF, { ...d });
+  window._firebaseReady = true;
+  window.dispatchEvent(new Event('firebase-ready'));
+</script>
 <style>
   :root {
     --bg: #0a0a0f;
@@ -750,19 +772,66 @@ const DEFAULT_DATA = {
 /* ════════════════════════════════════════
    STATE
 ════════════════════════════════════════ */
-let data = loadData();
+let data = JSON.parse(JSON.stringify(DEFAULT_DATA));
 let selectedDay = null;
 let activeTab = "dashboard";
+let _saveTimer = null;
 
-function loadData() {
-  try {
-    const s = localStorage.getItem("devsorbit_pm_html");
-    if (s) return JSON.parse(s);
-  } catch(e) {}
-  return JSON.parse(JSON.stringify(DEFAULT_DATA));
-}
 function saveData() {
+  // Always save to localStorage as fallback
   try { localStorage.setItem("devsorbit_pm_html", JSON.stringify(data)); } catch(e) {}
+  // Debounced save to Firestore
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    if (window._fbSetDoc) {
+      window._fbSetDoc(JSON.parse(JSON.stringify(data)))
+        .catch(err => console.warn("Firestore save failed:", err));
+    }
+  }, 800);
+}
+
+async function loadFromFirebase() {
+  try {
+    const snap = await window._fbGetDoc();
+    if (snap.exists()) {
+      data = snap.data();
+    } else {
+      // First time: push default data to Firestore
+      await window._fbSetDoc(JSON.parse(JSON.stringify(DEFAULT_DATA)));
+    }
+  } catch(err) {
+    console.warn("Firestore load failed, using localStorage:", err);
+    try {
+      const s = localStorage.getItem("devsorbit_pm_html");
+      if (s) data = JSON.parse(s);
+    } catch(e) {}
+  }
+  renderAll();
+}
+
+// Load data: Firebase if ready, else listen, else localStorage fallback
+function initApp() {
+  if (window._firebaseReady && window._fbGetDoc) {
+    loadFromFirebase();
+  } else {
+    window.addEventListener('firebase-ready', loadFromFirebase, { once: true });
+    // Hard fallback after 4s if Firebase never responds
+    setTimeout(() => {
+      if (!window._firebaseReady) {
+        try {
+          const s = localStorage.getItem("devsorbit_pm_html");
+          if (s) data = JSON.parse(s);
+        } catch(e) {}
+        renderAll();
+      }
+    }, 4000);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
 }
 
 /* ════════════════════════════════════════
@@ -1274,8 +1343,6 @@ function renderAll() {
   renderLeads();
   renderNotes();
 }
-
-renderAll();
 
 /* ════════════════════════════════════════
    LOGIN SYSTEM
