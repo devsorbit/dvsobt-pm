@@ -80,6 +80,22 @@
   .tab.active { background: var(--cyan); color: var(--bg); font-weight: 700; }
   .tab:hover:not(.active) { color: var(--text); }
 
+  /* ── PROJECT SWITCHER ── */
+  .project-switcher-wrap { display: flex; align-items: center; gap: 6px; }
+  #project-switcher {
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: 8px; padding: 7px 10px; color: var(--cyan);
+    font-size: 12px; font-weight: 700; font-family: var(--font);
+    outline: none; max-width: 180px;
+  }
+  .add-project-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border2);
+    background: transparent; color: var(--green); cursor: pointer;
+    font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .add-project-btn:hover { border-color: var(--green); background: #52b78822; }
+
   /* ── MAIN ── */
   #main { padding: 24px; max-width: 1200px; margin: 0 auto; }
 
@@ -128,13 +144,13 @@
   .metric-pct { font-size: 11px; color: var(--text3); margin-top: 4px; }
 
   /* ── INPUTS ── */
-  input[type=text], input[type=date], input[type=number], textarea, select {
+  input[type=text], input[type=date], input[type=time], input[type=number], textarea, select {
     background: var(--bg3); border: 1px solid var(--border2);
     border-radius: 8px; padding: 8px 12px; color: var(--text);
     font-size: 14px; outline: none; font-family: var(--font);
     transition: border-color 0.2s;
   }
-  input[type=text]:focus, input[type=date]:focus, input[type=number]:focus,
+  input[type=text]:focus, input[type=date]:focus, input[type=time]:focus, input[type=number]:focus,
   textarea:focus, select:focus { border-color: var(--cyan); }
   input.full, textarea.full, select.full { width: 100%; }
   textarea { resize: vertical; min-height: 80px; }
@@ -192,7 +208,7 @@
     align-items: center; justify-content: center; padding: 20px;
   }
   .modal-overlay.open { display: flex; }
-  .modal-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 100%; max-width: 520px; }
+  .modal-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; }
   .modal-title { font-size: 16px; font-weight: 800; margin-bottom: 16px; }
 
   /* ── BUDGET MINI CARD ── */
@@ -232,6 +248,14 @@
   .fs12 { font-size: 12px; }
   .fs11 { font-size: 11px; }
   .f700 { font-weight: 700; }
+
+  /* ── OVERVIEW (ALL PROJECTS) ── */
+  .project-overview-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px; margin-bottom: 14px; cursor: pointer; transition: all 0.2s;
+  }
+  .project-overview-card:hover { border-color: var(--cyan); }
+  .project-overview-card.is-active { border-color: var(--cyan); background: #0f2030; }
 
   /* ── LOGIN SCREEN ── */
   #login-screen {
@@ -387,20 +411,48 @@
     <div class="logo-sub">Facebook Ad Project Tracker</div>
   </div>
   <div class="tabs">
-    <button class="tab active" data-tab="dashboard">📊 Dashboard</button>
+    <button class="tab active" data-tab="overview">🌐 Overview</button>
+    <button class="tab" data-tab="dashboard">📊 Dashboard</button>
     <button class="tab" data-tab="timeline">📅 Timeline</button>
     <button class="tab" data-tab="campaigns">📢 Campaigns</button>
     <button class="tab" data-tab="leads">💬 Leads</button>
     <button class="tab" data-tab="notes">📝 Notes</button>
   </div>
-  <button class="logout-btn" onclick="doLogout()">⏻ Logout</button>
+  <div class="row">
+    <div class="project-switcher-wrap">
+      <select id="project-switcher" onchange="switchProject(this.value)"></select>
+      <button class="add-project-btn" onclick="promptAddProject()" title="Add new project">＋</button>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">⏻ Logout</button>
+  </div>
 </div>
 
 <!-- MAIN -->
 <div id="main">
 
+  <!-- ══════════════ OVERVIEW (ALL PROJECTS) ══════════════ -->
+  <div class="page active" id="page-overview">
+    <div class="section-header">
+      <div class="h2">🌐 All Projects Overview</div>
+      <button class="btn btn-green" onclick="promptAddProject()">+ New Project</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Combined Totals</div>
+      <div class="grid4" id="overview-totals-grid"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Leads — All Projects</div>
+      <div class="grid4" id="overview-leads-grid"></div>
+    </div>
+
+    <div class="h2 mb12" style="font-size:15px;">Projects</div>
+    <div id="overview-projects-list"></div>
+  </div>
+
   <!-- ══════════════ DASHBOARD ══════════════ -->
-  <div class="page active" id="page-dashboard">
+  <div class="page" id="page-dashboard">
 
     <!-- Project Info -->
     <div class="card" id="project-card">
@@ -457,6 +509,7 @@
       <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Add New Day</div>
       <div class="grid2">
         <div><span class="label">Date *</span><input type="date" class="full" id="nd-date" /></div>
+        <div><span class="label">Time (optional)</span><input type="time" class="full" id="nd-time" /></div>
         <div><span class="label">Label (e.g. May 19 — Tuesday)</span><input type="text" class="full" id="nd-label" placeholder="May 19 — Tuesday" /></div>
         <div><span class="label">Title *</span><input type="text" class="full" id="nd-title" placeholder="Day title..." /></div>
         <div>
@@ -568,9 +621,12 @@
       <div><span class="label">Total Budget (BDT)</span><input type="number" class="full" id="ep-budget" /></div>
       <div><span class="label">USD Rate (৳ per $1)</span><input type="number" class="full" id="ep-rate" /></div>
     </div>
-    <div class="row" style="justify-content:flex-end;">
-      <button class="btn btn-ghost-gray" onclick="closeModal('modal-project')">Cancel</button>
-      <button class="btn btn-cyan" onclick="saveProject()">Save</button>
+    <div class="row" style="justify-content:space-between;">
+      <button class="btn-sm" style="background:var(--red)22;color:var(--red);" onclick="deleteActiveProject()">🗑️ Delete Project</button>
+      <div class="row">
+        <button class="btn btn-ghost-gray" onclick="closeModal('modal-project')">Cancel</button>
+        <button class="btn btn-cyan" onclick="saveProject()">Save</button>
+      </div>
     </div>
   </div>
 </div>
@@ -609,7 +665,7 @@
 
 <script>
 /* ════════════════════════════════════════
-   DATA
+   STATIC LOOKUPS
 ════════════════════════════════════════ */
 const PHASE_COLORS = {
   setup:  { bg: "#1a1a2e", accent: "#e94560", label: "Setup" },
@@ -624,163 +680,223 @@ const STATUS_COLORS = { new:"#00d4ff", contacted:"#f5a623", demo_sent:"#c77dff",
 
 const METRIC_COLORS = ["#00d4ff","#52b788","#f5a623","#c77dff"];
 
-const DEFAULT_DATA = {
-  project: {
-    name: "Devs Orbit — Facebook Ad Project",
-    startDate: "2026-05-05",
-    goal: "১৪ দিনের মধ্যে minimum ১টা order close করা এবং ad budget self-sustaining করা।",
-    budget: { total: 10000, currency: "BDT", usdRate: 146 },
-  },
-  metrics: [
-    { id: 1, label: "Video ThruPlay (Week 1)", target: "200+", current: "0" },
-    { id: 2, label: "Message আসা (Week 2)", target: "10+", current: "0" },
-    { id: 3, label: "Demo পাঠানো", target: "5+", current: "0" },
-    { id: 4, label: "Order Close", target: "1+", current: "0" },
-  ],
-  campaigns: [
-    {
-      id: 1, name: "Video Views Campaign", week: 1,
-      objective: "Video Views", dailyBudgetUSD: 3,
-      startDate: "2026-05-05", endDate: "2026-05-11",
-      status: "upcoming",
-      audience: "Bangladesh | Age 28–55 | Business, Tourism, Hotel, Travel",
-      placement: "Facebook Feed + Reels",
-      adsets: [
-        { id: 1, name: "AdSet 1 — Broad Bangladesh", budget: "$3/day",
-          ads: [
-            { id: 1, name: "Creative A — Hook: Google-এ নেই কেন?", status: "draft" },
-            { id: 2, name: "Creative B — Hook: Online booking নেই?", status: "draft" },
-          ]
-        }
-      ]
+/* ════════════════════════════════════════
+   DEFAULT SEED PROJECT (used for the very first project)
+════════════════════════════════════════ */
+function buildDefaultProject() {
+  return {
+    id: 1,
+    project: {
+      name: "Devs Orbit — Facebook Ad Project",
+      startDate: "2026-05-05",
+      goal: "১৪ দিনের মধ্যে minimum ১টা order close করা এবং ad budget self-sustaining করা।",
+      budget: { total: 10000, currency: "BDT", usdRate: 146 },
     },
-    {
-      id: 2, name: "Message Campaign", week: 2,
-      objective: "Messenger Conversations", dailyBudgetUSD: 5,
-      startDate: "2026-05-12", endDate: "2026-05-18",
-      status: "upcoming",
-      audience: "Bangladesh | Age 28–55 | Business, Tourism, Hotel, Travel",
-      placement: "Facebook Feed only",
-      adsets: [
-        { id: 1, name: "AdSet 1 — Broad Bangladesh", budget: "$5/day",
-          ads: [
-            { id: 1, name: "Creative A — Image: Before/After", status: "draft" },
-            { id: 2, name: "Creative B — Video: Short Offer", status: "draft" },
-          ]
-        }
-      ]
-    }
-  ],
-  days: [
-    { date:"2026-05-03", label:"আজ রাত", title:"Setup Night", phase:"setup", tasks:[
-      {id:1,text:"Jihad ভাইয়ের Ad Account-এ Devs Orbit Page connect করো",done:false},
-      {id:2,text:"Payment method add করো (card/bKash)",done:false},
-      {id:3,text:"Messenger Instant Reply setup করো",done:false},
-      {id:4,text:"Messenger Away Message setup করো (রাতের জন্য)",done:false},
-      {id:5,text:"WhatsApp Business app install ও setup করো",done:false},
-    ]},
-    { date:"2026-05-04", label:"May 4 — Monday", title:"Creative Day", phase:"prep", tasks:[
-      {id:1,text:"Video Creative A তৈরি করো (Hook: Google-এ নেই কেন?)",done:false},
-      {id:2,text:"Video Creative B তৈরি করো (Hook: Online booking নেই?)",done:false},
-      {id:3,text:"দুটো video edit করো + Subtitle যোগ করো",done:false},
-      {id:4,text:"Thumbnail বানাও দুটোর জন্য",done:false},
-      {id:5,text:"Message Campaign-এর Image Creative plan করো (Before/After)",done:false},
-      {id:6,text:"Message Campaign-এর Video Creative plan করো",done:false},
-      {id:7,text:"Video Views Campaign Ad Manager-এ draft ready করো (চালু না)",done:false},
-    ]},
-    { date:"2026-05-05", label:"May 5 — Tuesday", title:"🚀 Campaign Launch Day", phase:"week1", tasks:[
-      {id:1,text:"সকাল ১০টা: Video Views Campaign চালু করো ($3/day)",done:false},
-      {id:2,text:"দুপুর: Organic post দাও (Demo website screenshot)",done:false},
-      {id:3,text:"রাত: Meta Business Suite চেক করো — কোনো change না",done:false},
-    ]},
-    { date:"2026-05-06", label:"May 6 — Wednesday", title:"Observation Day", phase:"week1", tasks:[
-      {id:1,text:"সকাল ৯টা: Impressions, ThruPlay, CPM দেখো",done:false},
-      {id:2,text:"দুপুর: কোনো change করবে না (learning phase)",done:false},
-      {id:3,text:"রাত: Data note করো",done:false},
-    ]},
-    { date:"2026-05-07", label:"May 7 — Thursday", title:"First Data Check", phase:"week1", tasks:[
-      {id:1,text:"ThruPlay rate চেক করো (>15% ভালো, <10% সমস্যা)",done:false},
-      {id:2,text:"Cost per ThruPlay চেক করো (>$0.05 হলে audience সমস্যা)",done:false},
-      {id:3,text:"সমস্যা থাকলে Thumbnail বদলাও (video না)",done:false},
-      {id:4,text:"Organic Reel দাও: 'একটা resort website কেমন দেখতে হয়?'",done:false},
-    ]},
-    { date:"2026-05-08", label:"May 8 — Friday", title:"Midpoint Review", phase:"week1", tasks:[
-      {id:1,text:"সকাল: Full data review — Creative A নাকি B ভালো চলছে note করো",done:false},
-      {id:2,text:"দুপুর: Message Campaign Image Creative (Before/After) final করো",done:false},
-      {id:3,text:"রাত: Message Campaign Video Creative তৈরি করো",done:false},
-    ]},
-    { date:"2026-05-09", label:"May 9 — Saturday", title:"Content & Prep Day", phase:"week1", tasks:[
-      {id:1,text:"Organic post: 'Website না থাকলে প্রতিদিন কত booking হারাচ্ছেন?'",done:false},
-      {id:2,text:"Message Campaign Ad Manager-এ draft ready করো",done:false},
-      {id:3,text:"রাত: Customer conversation practice — ৬টা common প্রশ্নের উত্তর লিখে রাখো",done:false},
-    ]},
-    { date:"2026-05-10", label:"May 10 — Sunday", title:"Final Prep", phase:"week1", tasks:[
-      {id:1,text:"Video Views campaign last data check করো",done:false},
-      {id:2,text:"Message Campaign সব কিছু final confirm করো",done:false},
-      {id:3,text:"রাত: Video Views campaign manually বন্ধ করো",done:false},
-    ]},
-    { date:"2026-05-11", label:"May 11 — Monday", title:"Week 1 Full Review", phase:"week1", tasks:[
-      {id:1,text:"মোট Impression কত হলো? Note করো",done:false},
-      {id:2,text:"ThruPlay কত হলো? Note করো",done:false},
-      {id:3,text:"কোন Creative ভালো চললো? Note করো",done:false},
-      {id:4,text:"Cost per ThruPlay কত পড়লো? Note করো",done:false},
-      {id:5,text:"Week 2 Creative-এ Week 1-এর best style follow করো",done:false},
-    ]},
-    { date:"2026-05-12", label:"May 12 — Tuesday", title:"🚀 Message Campaign Launch", phase:"week2", tasks:[
-      {id:1,text:"সকাল ১০টা: Message Campaign চালু করো ($5/day)",done:false},
-      {id:2,text:"Conversation Tracker শুরু করো (নাম | রিসোর্ট | প্রশ্ন | Status)",done:false},
-      {id:3,text:"Message আসলে ১ ঘণ্টার মধ্যে reply করো",done:false},
-    ]},
-    { date:"2026-05-13", label:"May 13 — Wednesday", title:"First Response Day", phase:"week2", tasks:[
-      {id:1,text:"সকাল ৯টা: Message check ও reply",done:false},
-      {id:2,text:"দুপুর ২টা: Message check ও reply",done:false},
-      {id:3,text:"রাত ৮টা: Message check + data note করো",done:false},
-    ]},
-    { date:"2026-05-14", label:"May 14 — Thursday", title:"Demo Delivery Day", phase:"week2", tasks:[
-      {id:1,text:"Lead-এর জন্য demo website বানাও",done:false},
-      {id:2,text:"Demo link পাঠাও Messenger-এ",done:false},
-      {id:3,text:"Follow up message পাঠাও (১০% advance offer সহ)",done:false},
-    ]},
-    { date:"2026-05-15", label:"May 15 — Friday", title:"Follow Up Day", phase:"week2", tasks:[
-      {id:1,text:"Demo দেখেছে কিন্তু reply নেই → follow up message পাঠাও",done:false},
-      {id:2,text:"Campaign data check: message rate ভালো? না হলে creative বদলাও",done:false},
-      {id:3,text:"Organic urgency post: 'এই সপ্তাহে মাত্র ২টা slot বাকি'",done:false},
-    ]},
-    { date:"2026-05-16", label:"May 16 — Saturday", title:"Push Day", phase:"week2", tasks:[
-      {id:1,text:"সব open conversation-এর status check করো",done:false},
-      {id:2,text:"Message ভালো আসছে → budget $7/day করো",done:false},
-      {id:3,text:"সবচেয়ে কাছের lead-কে priority দাও",done:false},
-    ]},
-    { date:"2026-05-17", label:"May 17 — Sunday", title:"Close Day", phase:"week2", tasks:[
-      {id:1,text:"Final follow up সব lead-কে",done:false},
-      {id:2,text:"Order close করার চেষ্টা করো",done:false},
-      {id:3,text:"Order এলে: Payment নাও → কাজ শুরু করো → ৩ দিনে deliver → Testimonial নাও",done:false},
-    ]},
-    { date:"2026-05-18", label:"May 18 — Monday", title:"📊 Final Review & Decision", phase:"review", tasks:[
-      {id:1,text:"মোট কত message এলো? Note করো",done:false},
-      {id:2,text:"কতটা conversation হলো? Note করো",done:false},
-      {id:3,text:"Demo কতটা পাঠালাম? Note করো",done:false},
-      {id:4,text:"Order কতটা আসলো? Note করো",done:false},
-      {id:5,text:"কোথায় মানুষ drop করলো? Analyze করো",done:false},
-      {id:6,text:"Next step decision নাও (scale / fix / pivot)",done:false},
-    ]},
-  ],
-  leads: [],
-  notes: [],
+    metrics: [
+      { id: 1, label: "Video ThruPlay (Week 1)", target: "200+", current: "0" },
+      { id: 2, label: "Message আসা (Week 2)", target: "10+", current: "0" },
+      { id: 3, label: "Demo পাঠানো", target: "5+", current: "0" },
+      { id: 4, label: "Order Close", target: "1+", current: "0" },
+    ],
+    campaigns: [
+      {
+        id: 1, name: "Video Views Campaign", week: 1,
+        objective: "Video Views", dailyBudgetUSD: 3,
+        startDate: "2026-05-05", endDate: "2026-05-11",
+        status: "upcoming",
+        audience: "Bangladesh | Age 28–55 | Business, Tourism, Hotel, Travel",
+        placement: "Facebook Feed + Reels",
+        adsets: [
+          { id: 1, name: "AdSet 1 — Broad Bangladesh", budget: "$3/day",
+            ads: [
+              { id: 1, name: "Creative A — Hook: Google-এ নেই কেন?", status: "draft" },
+              { id: 2, name: "Creative B — Hook: Online booking নেই?", status: "draft" },
+            ]
+          }
+        ]
+      },
+      {
+        id: 2, name: "Message Campaign", week: 2,
+        objective: "Messenger Conversations", dailyBudgetUSD: 5,
+        startDate: "2026-05-12", endDate: "2026-05-18",
+        status: "upcoming",
+        audience: "Bangladesh | Age 28–55 | Business, Tourism, Hotel, Travel",
+        placement: "Facebook Feed only",
+        adsets: [
+          { id: 1, name: "AdSet 1 — Broad Bangladesh", budget: "$5/day",
+            ads: [
+              { id: 1, name: "Creative A — Image: Before/After", status: "draft" },
+              { id: 2, name: "Creative B — Video: Short Offer", status: "draft" },
+            ]
+          }
+        ]
+      }
+    ],
+    days: [
+      { date:"2026-05-03", time:"", label:"আজ রাত", title:"Setup Night", phase:"setup", tasks:[
+        {id:1,text:"Jihad ভাইয়ের Ad Account-এ Devs Orbit Page connect করো",done:false},
+        {id:2,text:"Payment method add করো (card/bKash)",done:false},
+        {id:3,text:"Messenger Instant Reply setup করো",done:false},
+        {id:4,text:"Messenger Away Message setup করো (রাতের জন্য)",done:false},
+        {id:5,text:"WhatsApp Business app install ও setup করো",done:false},
+      ]},
+      { date:"2026-05-04", time:"", label:"May 4 — Monday", title:"Creative Day", phase:"prep", tasks:[
+        {id:1,text:"Video Creative A তৈরি করো (Hook: Google-এ নেই কেন?)",done:false},
+        {id:2,text:"Video Creative B তৈরি করো (Hook: Online booking নেই?)",done:false},
+        {id:3,text:"দুটো video edit করো + Subtitle যোগ করো",done:false},
+        {id:4,text:"Thumbnail বানাও দুটোর জন্য",done:false},
+        {id:5,text:"Message Campaign-এর Image Creative plan করো (Before/After)",done:false},
+        {id:6,text:"Message Campaign-এর Video Creative plan করো",done:false},
+        {id:7,text:"Video Views Campaign Ad Manager-এ draft ready করো (চালু না)",done:false},
+      ]},
+      { date:"2026-05-05", time:"10:00", label:"May 5 — Tuesday", title:"🚀 Campaign Launch Day", phase:"week1", tasks:[
+        {id:1,text:"সকাল ১০টা: Video Views Campaign চালু করো ($3/day)",done:false},
+        {id:2,text:"দুপুর: Organic post দাও (Demo website screenshot)",done:false},
+        {id:3,text:"রাত: Meta Business Suite চেক করো — কোনো change না",done:false},
+      ]},
+      { date:"2026-05-06", time:"", label:"May 6 — Wednesday", title:"Observation Day", phase:"week1", tasks:[
+        {id:1,text:"সকাল ৯টা: Impressions, ThruPlay, CPM দেখো",done:false},
+        {id:2,text:"দুপুর: কোনো change করবে না (learning phase)",done:false},
+        {id:3,text:"রাত: Data note করো",done:false},
+      ]},
+      { date:"2026-05-07", time:"", label:"May 7 — Thursday", title:"First Data Check", phase:"week1", tasks:[
+        {id:1,text:"ThruPlay rate চেক করো (>15% ভালো, <10% সমস্যা)",done:false},
+        {id:2,text:"Cost per ThruPlay চেক করো (>$0.05 হলে audience সমস্যা)",done:false},
+        {id:3,text:"সমস্যা থাকলে Thumbnail বদলাও (video না)",done:false},
+        {id:4,text:"Organic Reel দাও: 'একটা resort website কেমন দেখতে হয়?'",done:false},
+      ]},
+      { date:"2026-05-08", time:"", label:"May 8 — Friday", title:"Midpoint Review", phase:"week1", tasks:[
+        {id:1,text:"সকাল: Full data review — Creative A নাকি B ভালো চলছে note করো",done:false},
+        {id:2,text:"দুপুর: Message Campaign Image Creative (Before/After) final করো",done:false},
+        {id:3,text:"রাত: Message Campaign Video Creative তৈরি করো",done:false},
+      ]},
+      { date:"2026-05-09", time:"", label:"May 9 — Saturday", title:"Content & Prep Day", phase:"week1", tasks:[
+        {id:1,text:"Organic post: 'Website না থাকলে প্রতিদিন কত booking হারাচ্ছেন?'",done:false},
+        {id:2,text:"Message Campaign Ad Manager-এ draft ready করো",done:false},
+        {id:3,text:"রাত: Customer conversation practice — ৬টা common প্রশ্নের উত্তর লিখে রাখো",done:false},
+      ]},
+      { date:"2026-05-10", time:"", label:"May 10 — Sunday", title:"Final Prep", phase:"week1", tasks:[
+        {id:1,text:"Video Views campaign last data check করো",done:false},
+        {id:2,text:"Message Campaign সব কিছু final confirm করো",done:false},
+        {id:3,text:"রাত: Video Views campaign manually বন্ধ করো",done:false},
+      ]},
+      { date:"2026-05-11", time:"", label:"May 11 — Monday", title:"Week 1 Full Review", phase:"week1", tasks:[
+        {id:1,text:"মোট Impression কত হলো? Note করো",done:false},
+        {id:2,text:"ThruPlay কত হলো? Note করো",done:false},
+        {id:3,text:"কোন Creative ভালো চললো? Note করো",done:false},
+        {id:4,text:"Cost per ThruPlay কত পড়লো? Note করো",done:false},
+        {id:5,text:"Week 2 Creative-এ Week 1-এর best style follow করো",done:false},
+      ]},
+      { date:"2026-05-12", time:"10:00", label:"May 12 — Tuesday", title:"🚀 Message Campaign Launch", phase:"week2", tasks:[
+        {id:1,text:"সকাল ১০টা: Message Campaign চালু করো ($5/day)",done:false},
+        {id:2,text:"Conversation Tracker শুরু করো (নাম | রিসোর্ট | প্রশ্ন | Status)",done:false},
+        {id:3,text:"Message আসলে ১ ঘণ্টার মধ্যে reply করো",done:false},
+      ]},
+      { date:"2026-05-13", time:"", label:"May 13 — Wednesday", title:"First Response Day", phase:"week2", tasks:[
+        {id:1,text:"সকাল ৯টা: Message check ও reply",done:false},
+        {id:2,text:"দুপুর ২টা: Message check ও reply",done:false},
+        {id:3,text:"রাত ৮টা: Message check + data note করো",done:false},
+      ]},
+      { date:"2026-05-14", time:"", label:"May 14 — Thursday", title:"Demo Delivery Day", phase:"week2", tasks:[
+        {id:1,text:"Lead-এর জন্য demo website বানাও",done:false},
+        {id:2,text:"Demo link পাঠাও Messenger-এ",done:false},
+        {id:3,text:"Follow up message পাঠাও (১০% advance offer সহ)",done:false},
+      ]},
+      { date:"2026-05-15", time:"", label:"May 15 — Friday", title:"Follow Up Day", phase:"week2", tasks:[
+        {id:1,text:"Demo দেখেছে কিন্তু reply নেই → follow up message পাঠাও",done:false},
+        {id:2,text:"Campaign data check: message rate ভালো? না হলে creative বদলাও",done:false},
+        {id:3,text:"Organic urgency post: 'এই সপ্তাহে মাত্র ২টা slot বাকি'",done:false},
+      ]},
+      { date:"2026-05-16", time:"", label:"May 16 — Saturday", title:"Push Day", phase:"week2", tasks:[
+        {id:1,text:"সব open conversation-এর status check করো",done:false},
+        {id:2,text:"Message ভালো আসছে → budget $7/day করো",done:false},
+        {id:3,text:"সবচেয়ে কাছের lead-কে priority দাও",done:false},
+      ]},
+      { date:"2026-05-17", time:"", label:"May 17 — Sunday", title:"Close Day", phase:"week2", tasks:[
+        {id:1,text:"Final follow up সব lead-কে",done:false},
+        {id:2,text:"Order close করার চেষ্টা করো",done:false},
+        {id:3,text:"Order এলে: Payment নাও → কাজ শুরু করো → ৩ দিনে deliver → Testimonial নাও",done:false},
+      ]},
+      { date:"2026-05-18", time:"", label:"May 18 — Monday", title:"📊 Final Review & Decision", phase:"review", tasks:[
+        {id:1,text:"মোট কত message এলো? Note করো",done:false},
+        {id:2,text:"কতটা conversation হলো? Note করো",done:false},
+        {id:3,text:"Demo কতটা পাঠালাম? Note করো",done:false},
+        {id:4,text:"Order কতটা আসলো? Note করো",done:false},
+        {id:5,text:"কোথায় মানুষ drop করলো? Analyze করো",done:false},
+        {id:6,text:"Next step decision নাও (scale / fix / pivot)",done:false},
+      ]},
+    ],
+    leads: [],
+    notes: [],
+  };
+}
+
+function buildBlankProject(id, name) {
+  return {
+    id,
+    project: {
+      name: name || ("New Project " + id),
+      startDate: new Date().toISOString().slice(0,10),
+      goal: "",
+      budget: { total: 0, currency: "BDT", usdRate: 146 },
+    },
+    metrics: [
+      { id: 1, label: "Metric 1", target: "10", current: "0" },
+      { id: 2, label: "Metric 2", target: "10", current: "0" },
+    ],
+    campaigns: [],
+    days: [],
+    leads: [],
+    notes: [],
+  };
+}
+
+const DEFAULT_STATE = {
+  activeProjectId: 1,
+  projects: [ buildDefaultProject() ],
 };
 
 /* ════════════════════════════════════════
    STATE
 ════════════════════════════════════════ */
-let data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+let data = JSON.parse(JSON.stringify(DEFAULT_STATE));
 let selectedDay = null;
-let activeTab = "dashboard";
+let activeTab = "overview";
 let _saveTimer = null;
 
+/* Migrate old single-project schema ({project,metrics,campaigns,days,leads,notes})
+   into the new multi-project schema ({activeProjectId, projects:[...]}) */
+function migrateIfNeeded(raw) {
+  if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
+  if (raw.projects && Array.isArray(raw.projects) && raw.projects.length) {
+    if (!raw.activeProjectId) raw.activeProjectId = raw.projects[0].id;
+    return raw;
+  }
+  if (raw.project) {
+    // old schema — wrap it as project id 1
+    const wrapped = {
+      id: 1,
+      project: raw.project,
+      metrics: raw.metrics || [],
+      campaigns: raw.campaigns || [],
+      days: (raw.days || []).map(d => ({ time: "", ...d })),
+      leads: raw.leads || [],
+      notes: raw.notes || [],
+    };
+    return { activeProjectId: 1, projects: [wrapped] };
+  }
+  return JSON.parse(JSON.stringify(DEFAULT_STATE));
+}
+
+/* Active project accessor */
+function P() {
+  let p = data.projects.find(pr => pr.id === data.activeProjectId);
+  if (!p) { p = data.projects[0]; if (p) data.activeProjectId = p.id; }
+  return p;
+}
+
 function saveData() {
-  // Always save to localStorage as fallback
   try { localStorage.setItem("devsorbit_pm_html", JSON.stringify(data)); } catch(e) {}
-  // Debounced save to Firestore
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     if (window._fbSetDoc) {
@@ -794,34 +910,32 @@ async function loadFromFirebase() {
   try {
     const snap = await window._fbGetDoc();
     if (snap.exists()) {
-      data = snap.data();
+      data = migrateIfNeeded(snap.data());
     } else {
-      // First time: push default data to Firestore
-      await window._fbSetDoc(JSON.parse(JSON.stringify(DEFAULT_DATA)));
+      data = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      await window._fbSetDoc(JSON.parse(JSON.stringify(data)));
     }
   } catch(err) {
     console.warn("Firestore load failed, using localStorage:", err);
     try {
       const s = localStorage.getItem("devsorbit_pm_html");
-      if (s) data = JSON.parse(s);
-    } catch(e) {}
+      data = migrateIfNeeded(s ? JSON.parse(s) : null);
+    } catch(e) { data = JSON.parse(JSON.stringify(DEFAULT_STATE)); }
   }
   renderAll();
 }
 
-// Load data: Firebase if ready, else listen, else localStorage fallback
 function initApp() {
   if (window._firebaseReady && window._fbGetDoc) {
     loadFromFirebase();
   } else {
     window.addEventListener('firebase-ready', loadFromFirebase, { once: true });
-    // Hard fallback after 4s if Firebase never responds
     setTimeout(() => {
       if (!window._firebaseReady) {
         try {
           const s = localStorage.getItem("devsorbit_pm_html");
-          if (s) data = JSON.parse(s);
-        } catch(e) {}
+          data = migrateIfNeeded(s ? JSON.parse(s) : null);
+        } catch(e) { data = JSON.parse(JSON.stringify(DEFAULT_STATE)); }
         renderAll();
       }
     }, 4000);
@@ -845,13 +959,24 @@ function getProgress(tasks) {
   return Math.round(tasks.filter(t=>t.done).length / tasks.length * 100);
 }
 function calcDays(startDate, endDate) {
+  if (!startDate || !endDate) return 0;
   return Math.ceil((new Date(endDate) - new Date(startDate)) / 86400000) + 1;
 }
 function fBDT(usd, rate) {
   return Math.round(usd * rate).toLocaleString();
 }
-function totalAdSpendUSD() {
-  return data.campaigns.reduce((s,c) => s + c.dailyBudgetUSD * calcDays(c.startDate, c.endDate), 0);
+function totalAdSpendUSD(proj) {
+  return proj.campaigns.reduce((s,c) => s + c.dailyBudgetUSD * calcDays(c.startDate, c.endDate), 0);
+}
+function fmtTime(t) {
+  if (!t) return '';
+  const [h,m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ════════════════════════════════════════
@@ -859,24 +984,140 @@ function totalAdSpendUSD() {
 ════════════════════════════════════════ */
 document.querySelectorAll('.tab').forEach(btn => {
   btn.addEventListener('click', () => {
-    activeTab = btn.dataset.tab;
-    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-' + activeTab).classList.add('active');
-    renderAll();
+    goToTab(btn.dataset.tab);
   });
 });
+function goToTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  renderAll();
+}
 
 /* ════════════════════════════════════════
-   DASHBOARD
+   PROJECT SWITCHER / MULTI-PROJECT MGMT
+════════════════════════════════════════ */
+function renderProjectSwitcher() {
+  const sel = document.getElementById('project-switcher');
+  sel.innerHTML = data.projects.map(pr =>
+    `<option value="${pr.id}" ${pr.id===data.activeProjectId?'selected':''}>${escHtml(pr.project.name)}</option>`
+  ).join('');
+}
+function switchProject(id) {
+  data.activeProjectId = +id;
+  selectedDay = null;
+  saveData();
+  renderAll();
+}
+function promptAddProject() {
+  const name = prompt("New project name:");
+  if (name === null) return;
+  const trimmed = name.trim();
+  if (!trimmed) { alert('Project name required!'); return; }
+  const maxId = Math.max(0, ...data.projects.map(p=>p.id));
+  const np = buildBlankProject(maxId+1, trimmed);
+  data.projects.push(np);
+  data.activeProjectId = np.id;
+  selectedDay = null;
+  saveData();
+  goToTab('dashboard');
+}
+function deleteActiveProject() {
+  if (data.projects.length <= 1) { alert('At least one project must remain.'); return; }
+  if (!confirm(`Delete project "${P().project.name}"? This cannot be undone.`)) return;
+  const id = data.activeProjectId;
+  data.projects = data.projects.filter(p => p.id !== id);
+  data.activeProjectId = data.projects[0].id;
+  selectedDay = null;
+  saveData();
+  closeModal('modal-project');
+  renderAll();
+}
+
+/* ════════════════════════════════════════
+   OVERVIEW (ALL PROJECTS)
+════════════════════════════════════════ */
+function renderOverview() {
+  const totalsGrid = document.getElementById('overview-totals-grid');
+  let totalBudgetBDT = 0, totalSpendUSD = 0, totalTasks = 0, totalDone = 0;
+  data.projects.forEach(pr => {
+    totalBudgetBDT += pr.project.budget.total || 0;
+    totalSpendUSD += totalAdSpendUSD(pr);
+    pr.days.forEach(d => { totalTasks += d.tasks.length; totalDone += d.tasks.filter(t=>t.done).length; });
+  });
+  const overallPct = totalTasks ? Math.round(totalDone/totalTasks*100) : 0;
+  totalsGrid.innerHTML = `
+    <div class="metric-card">
+      <div class="metric-accent" style="background:#00d4ff;"></div>
+      <div class="metric-label">Total Projects</div>
+      <div class="metric-val" style="color:#00d4ff;">${data.projects.length}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-accent" style="background:#f5a623;"></div>
+      <div class="metric-label">Combined Budget</div>
+      <div class="metric-val" style="color:#f5a623;font-size:20px;">৳${totalBudgetBDT.toLocaleString()}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-accent" style="background:#c77dff;"></div>
+      <div class="metric-label">Combined Ad Spend</div>
+      <div class="metric-val" style="color:#c77dff;font-size:20px;">$${totalSpendUSD}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-accent" style="background:#52b788;"></div>
+      <div class="metric-label">Combined Task Progress</div>
+      <div class="metric-val" style="color:#52b788;">${overallPct}%</div>
+      <div class="metric-pct">${totalDone}/${totalTasks} tasks</div>
+    </div>
+  `;
+
+  const leadsGrid = document.getElementById('overview-leads-grid');
+  leadsGrid.innerHTML = LEAD_STATUSES.map(st => {
+    const cnt = data.projects.reduce((s,pr) => s + pr.leads.filter(l=>l.status===st).length, 0);
+    return `<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid ${STATUS_COLORS[st]}33;">
+      <div style="font-size:22px;font-weight:800;color:${STATUS_COLORS[st]};font-family:var(--mono);">${cnt}</div>
+      <div class="fs11" style="color:#666;">${STATUS_LABELS[st]}</div>
+    </div>`;
+  }).join('');
+
+  const list = document.getElementById('overview-projects-list');
+  list.innerHTML = data.projects.map(pr => {
+    const spend = totalAdSpendUSD(pr);
+    const tDone = pr.days.reduce((s,d)=>s+d.tasks.filter(t=>t.done).length,0);
+    const tAll = pr.days.reduce((s,d)=>s+d.tasks.length,0);
+    const pct = tAll ? Math.round(tDone/tAll*100) : 0;
+    const leadsCount = pr.leads.length;
+    const isActive = pr.id === data.activeProjectId;
+    return `
+      <div class="project-overview-card ${isActive?'is-active':''}" onclick="switchProject(${pr.id}); goToTab('dashboard');">
+        <div class="section-header" style="margin-bottom:10px;">
+          <div>
+            <div style="font-size:16px;font-weight:800;color:${isActive?'var(--cyan)':'var(--text)'};">${escHtml(pr.project.name)} ${isActive?badge('ACTIVE','#00d4ff'):''}</div>
+            <div class="fs12" style="color:var(--text2);margin-top:4px;">${escHtml(pr.project.goal||'No goal set')}</div>
+          </div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:var(--cyan);"></div></div>
+        <div class="row mt8" style="justify-content:space-between;">
+          <span class="fs12" style="color:var(--text3);">${tDone}/${tAll} tasks (${pct}%)</span>
+          <span class="fs12" style="color:var(--orange);">Spend: $${spend}</span>
+          <span class="fs12" style="color:var(--purple);">Budget: ৳${(pr.project.budget.total||0).toLocaleString()}</span>
+          <span class="fs12" style="color:var(--green);">Leads: ${leadsCount}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ════════════════════════════════════════
+   DASHBOARD (ACTIVE PROJECT)
 ════════════════════════════════════════ */
 function renderDashboard() {
-  const p = data.project;
+  const proj = P();
+  const p = proj.project;
   document.getElementById('proj-name').textContent = p.name;
   document.getElementById('proj-goal').textContent = p.goal;
 
-  const spend = totalAdSpendUSD();
+  const spend = totalAdSpendUSD(proj);
   document.getElementById('proj-badges').innerHTML = `
     ${badge('Start: ' + p.startDate, '#00d4ff')}
     ${badge('Budget: ৳' + p.budget.total.toLocaleString(), '#f5a623')}
@@ -884,8 +1125,8 @@ function renderDashboard() {
     ${badge('Ad Spend: $' + spend + ' ≈ ৳' + fBDT(spend, p.budget.usdRate), '#c77dff')}
   `;
 
-  const totalDone = data.days.reduce((s,d) => s + d.tasks.filter(t=>t.done).length, 0);
-  const totalAll  = data.days.reduce((s,d) => s + d.tasks.length, 0);
+  const totalDone = proj.days.reduce((s,d) => s + d.tasks.filter(t=>t.done).length, 0);
+  const totalAll  = proj.days.reduce((s,d) => s + d.tasks.length, 0);
   const pct = totalAll ? Math.round(totalDone/totalAll*100) : 0;
   document.getElementById('overall-fill').style.width = pct + '%';
   document.getElementById('overall-pct').textContent = pct + '%';
@@ -893,7 +1134,7 @@ function renderDashboard() {
 
   // Metrics
   const mg = document.getElementById('metrics-grid');
-  mg.innerHTML = data.metrics.map((m,i) => {
+  mg.innerHTML = proj.metrics.map((m,i) => {
     const c = METRIC_COLORS[i % METRIC_COLORS.length];
     const cur = parseFloat(m.current) || 0;
     const tgt = parseFloat(m.target) || 1;
@@ -901,7 +1142,7 @@ function renderDashboard() {
     return `
       <div class="metric-card">
         <div class="metric-accent" style="background:${c};"></div>
-        <div class="metric-label">${m.label}</div>
+        <div class="metric-label">${escHtml(m.label)}</div>
         <div class="row">
           <div class="metric-val" style="color:${c};" onclick="editMetric(${m.id})" id="mv-${m.id}" title="Click to edit">${m.current||'0'}</div>
           <div class="metric-target">/ ${m.target}</div>
@@ -916,12 +1157,12 @@ function renderDashboard() {
   const bg = document.getElementById('budget-grid');
   const spendBDT = Math.round(spend * p.budget.usdRate);
   const buffer = p.budget.total - spendBDT;
-  bg.innerHTML = data.campaigns.map(c => {
+  bg.innerHTML = proj.campaigns.map(c => {
     const days = calcDays(c.startDate, c.endDate);
     const tot = c.dailyBudgetUSD * days;
     return `
       <div class="budget-mini">
-        <div class="fs12" style="color:var(--text2);margin-bottom:6px;">${c.name}</div>
+        <div class="fs12" style="color:var(--text2);margin-bottom:6px;">${escHtml(c.name)}</div>
         <div style="font-size:20px;font-weight:800;color:var(--orange);font-family:var(--mono);">$${tot}</div>
         <div class="fs12" style="color:var(--text3);">$${c.dailyBudgetUSD}/day × ${days} days</div>
         <div class="fs12" style="color:#666;margin-top:4px;">≈ ৳${fBDT(tot, p.budget.usdRate)}</div>
@@ -938,7 +1179,7 @@ function renderDashboard() {
   // Leads summary
   const lsg = document.getElementById('leads-summary-grid');
   lsg.innerHTML = LEAD_STATUSES.map(st => {
-    const cnt = data.leads.filter(l=>l.status===st).length;
+    const cnt = proj.leads.filter(l=>l.status===st).length;
     return `<div style="text-align:center;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid ${STATUS_COLORS[st]}33;">
       <div style="font-size:22px;font-weight:800;color:${STATUS_COLORS[st]};font-family:var(--mono);">${cnt}</div>
       <div class="fs11" style="color:#666;">${STATUS_LABELS[st]}</div>
@@ -947,7 +1188,7 @@ function renderDashboard() {
 }
 
 function editMetric(id) {
-  const m = data.metrics.find(x=>x.id===id);
+  const m = P().metrics.find(x=>x.id===id);
   if (!m) return;
   const val = prompt(`Update "${m.label}" current value:`, m.current);
   if (val === null) return;
@@ -958,7 +1199,7 @@ function editMetric(id) {
 
 /* Edit project */
 function openEditProject() {
-  const p = data.project;
+  const p = P().project;
   document.getElementById('ep-name').value = p.name;
   document.getElementById('ep-goal').value = p.goal;
   document.getElementById('ep-start').value = p.startDate;
@@ -967,11 +1208,12 @@ function openEditProject() {
   document.getElementById('modal-project').classList.add('open');
 }
 function saveProject() {
-  data.project.name = document.getElementById('ep-name').value;
-  data.project.goal = document.getElementById('ep-goal').value;
-  data.project.startDate = document.getElementById('ep-start').value;
-  data.project.budget.total = +document.getElementById('ep-budget').value;
-  data.project.budget.usdRate = +document.getElementById('ep-rate').value;
+  const p = P().project;
+  p.name = document.getElementById('ep-name').value;
+  p.goal = document.getElementById('ep-goal').value;
+  p.startDate = document.getElementById('ep-start').value;
+  p.budget.total = +document.getElementById('ep-budget').value;
+  p.budget.usdRate = +document.getElementById('ep-rate').value;
   saveData(); renderAll();
   closeModal('modal-project');
 }
@@ -980,8 +1222,9 @@ function saveProject() {
    TIMELINE
 ════════════════════════════════════════ */
 function renderTimeline() {
+  const proj = P();
   const list = document.getElementById('day-list');
-  list.innerHTML = data.days.map((day, idx) => {
+  list.innerHTML = proj.days.map((day, idx) => {
     const prog = getProgress(day.tasks);
     const phase = PHASE_COLORS[day.phase] || PHASE_COLORS.week1;
     const isSel = selectedDay === idx;
@@ -991,14 +1234,15 @@ function renderTimeline() {
            onclick="selectDay(${idx})">
         <div class="row">
           ${badge(phase.label, phase.accent)}
-          <span class="fs12" style="color:var(--text3);">${day.label}</span>
+          <span class="fs12" style="color:var(--text3);">${escHtml(day.label)}</span>
+          ${day.time ? badge('🕒 ' + fmtTime(day.time), '#888') : ''}
         </div>
-        <div style="font-size:14px;font-weight:700;margin-top:6px;color:${isSel?phase.accent:'var(--text)'};">${day.title}</div>
+        <div style="font-size:14px;font-weight:700;margin-top:6px;color:${isSel?phase.accent:'var(--text)'};">${escHtml(day.title)}</div>
         <div class="progress-bar"><div class="progress-fill" style="width:${prog}%;background:${phase.accent};"></div></div>
         <div class="fs11" style="color:var(--text3);margin-top:4px;">${day.tasks.filter(t=>t.done).length}/${day.tasks.length} tasks</div>
       </div>
     `;
-  }).join('');
+  }).join('') || '<div class="empty">No days yet. Add your first day.</div>';
 
   renderDayDetail();
 }
@@ -1009,22 +1253,29 @@ function selectDay(idx) {
 }
 
 function renderDayDetail() {
+  const proj = P();
   const det = document.getElementById('day-detail');
-  if (selectedDay === null || !data.days[selectedDay]) { det.innerHTML=''; return; }
-  const day = data.days[selectedDay];
+  if (selectedDay === null || !proj.days[selectedDay]) { det.innerHTML=''; return; }
+  const day = proj.days[selectedDay];
   const phase = PHASE_COLORS[day.phase] || PHASE_COLORS.week1;
   det.innerHTML = `
     <div class="card" style="position:sticky;top:80px;">
       <div class="section-header">
         <div>
           ${badge(day.label, phase.accent)}
-          <div style="font-size:16px;font-weight:800;margin-top:6px;">${day.title}</div>
+          <div style="font-size:16px;font-weight:800;margin-top:6px;">${escHtml(day.title)}</div>
         </div>
         <button class="btn-sm" style="background:var(--red)22;color:var(--red);" onclick="deleteDay(${selectedDay})">🗑️</button>
       </div>
-      <div class="mb12">
-        <span class="label">Edit Title</span>
-        <input type="text" class="full" value="${escHtml(day.title)}" oninput="updateDayTitle(${selectedDay}, this.value)" />
+      <div class="grid2 mb12">
+        <div>
+          <span class="label">Edit Title</span>
+          <input type="text" class="full" value="${escHtml(day.title)}" oninput="updateDayField(${selectedDay}, 'title', this.value)" />
+        </div>
+        <div>
+          <span class="label">🕒 Time</span>
+          <input type="time" class="full" value="${day.time||''}" oninput="updateDayField(${selectedDay}, 'time', this.value)" />
+        </div>
       </div>
       <div class="divider"></div>
       ${day.tasks.map(task => `
@@ -1050,44 +1301,47 @@ function addDay() {
   const date = document.getElementById('nd-date').value;
   const title = document.getElementById('nd-title').value.trim();
   if (!date || !title) { alert('Date and Title are required!'); return; }
+  const time = document.getElementById('nd-time').value;
   const label = document.getElementById('nd-label').value.trim() || date;
   const phase = document.getElementById('nd-phase').value;
-  data.days.push({ date, label, title, phase, tasks: [] });
-  data.days.sort((a,b) => new Date(a.date)-new Date(b.date));
+  P().days.push({ date, time, label, title, phase, tasks: [] });
+  P().days.sort((a,b) => new Date(a.date)-new Date(b.date));
   saveData(); renderAll();
   toggleAddDay(false);
   document.getElementById('nd-date').value='';
+  document.getElementById('nd-time').value='';
   document.getElementById('nd-label').value='';
   document.getElementById('nd-title').value='';
 }
 function deleteDay(idx) {
   if (!confirm('Delete this day?')) return;
-  data.days.splice(idx, 1);
+  P().days.splice(idx, 1);
   selectedDay = null;
   saveData(); renderAll();
 }
-function updateDayTitle(idx, val) {
-  data.days[idx].title = val;
+function updateDayField(idx, field, val) {
+  P().days[idx][field] = val;
   saveData();
+  if (field === 'time') renderTimeline(); // keep the badge in list in sync
 }
 function toggleTask(dayIdx, taskId, done) {
-  const task = data.days[dayIdx].tasks.find(t=>t.id===taskId);
+  const task = P().days[dayIdx].tasks.find(t=>t.id===taskId);
   if (task) { task.done = done; saveData(); renderTimeline(); renderDashboard(); }
 }
 function editTaskText(dayIdx, taskId, text) {
-  const task = data.days[dayIdx].tasks.find(t=>t.id===taskId);
+  const task = P().days[dayIdx].tasks.find(t=>t.id===taskId);
   if (task) { task.text = text; saveData(); }
 }
 function deleteTask(dayIdx, taskId) {
-  data.days[dayIdx].tasks = data.days[dayIdx].tasks.filter(t=>t.id!==taskId);
+  P().days[dayIdx].tasks = P().days[dayIdx].tasks.filter(t=>t.id!==taskId);
   saveData(); renderTimeline(); renderDashboard();
 }
 function addTask(dayIdx) {
   const inp = document.getElementById('new-task-input');
   const text = inp ? inp.value.trim() : '';
   if (!text) return;
-  const maxId = Math.max(0, ...data.days[dayIdx].tasks.map(t=>t.id));
-  data.days[dayIdx].tasks.push({ id: maxId+1, text, done: false });
+  const maxId = Math.max(0, ...P().days[dayIdx].tasks.map(t=>t.id));
+  P().days[dayIdx].tasks.push({ id: maxId+1, text, done: false });
   saveData(); renderTimeline(); renderDashboard();
 }
 
@@ -1095,8 +1349,9 @@ function addTask(dayIdx) {
    CAMPAIGNS
 ════════════════════════════════════════ */
 function renderCampaigns() {
+  const proj = P();
   const cl = document.getElementById('campaigns-list');
-  cl.innerHTML = data.campaigns.map((camp, ci) => {
+  cl.innerHTML = proj.campaigns.map((camp, ci) => {
     const wCol = camp.week===1 ? '#00d4ff' : '#52b788';
     const days = calcDays(camp.startDate, camp.endDate);
     return `
@@ -1159,7 +1414,7 @@ function renderCampaigns() {
         <button class="btn-sm mt8" style="background:#c77dff22;color:var(--purple);" onclick="addAdset(${ci})">+ Add AdSet</button>
       </div>
     `;
-  }).join('');
+  }).join('') || '<div class="empty">No campaigns yet for this project.</div>';
 }
 
 function toggleAddCampaign(show) {
@@ -1172,19 +1427,20 @@ function addCampaign() {
   const end = document.getElementById('nc-end').value;
   const budget = +document.getElementById('nc-budget').value || 3;
   const week = +document.getElementById('nc-week').value || 1;
-  const maxId = Math.max(0, ...data.campaigns.map(c=>c.id));
-  data.campaigns.push({ id:maxId+1, name, week, objective:obj, dailyBudgetUSD:budget,
+  const proj = P();
+  const maxId = Math.max(0, ...proj.campaigns.map(c=>c.id));
+  proj.campaigns.push({ id:maxId+1, name, week, objective:obj, dailyBudgetUSD:budget,
     startDate:start, endDate:end, status:'upcoming', audience:'', placement:'Facebook Feed', adsets:[] });
   saveData(); renderAll();
   toggleAddCampaign(false);
 }
 function deleteCampaign(ci) {
   if (!confirm('Delete this campaign?')) return;
-  data.campaigns.splice(ci, 1);
+  P().campaigns.splice(ci, 1);
   saveData(); renderAll();
 }
 function openEditCampaign(ci) {
-  const c = data.campaigns[ci];
+  const c = P().campaigns[ci];
   document.getElementById('ec-idx').value = ci;
   document.getElementById('ec-name').value = c.name;
   document.getElementById('ec-objective').value = c.objective;
@@ -1198,48 +1454,52 @@ function openEditCampaign(ci) {
 }
 function saveCampaign() {
   const ci = +document.getElementById('ec-idx').value;
-  data.campaigns[ci].name = document.getElementById('ec-name').value;
-  data.campaigns[ci].objective = document.getElementById('ec-objective').value;
-  data.campaigns[ci].startDate = document.getElementById('ec-start').value;
-  data.campaigns[ci].endDate = document.getElementById('ec-end').value;
-  data.campaigns[ci].dailyBudgetUSD = +document.getElementById('ec-budget').value;
-  data.campaigns[ci].status = document.getElementById('ec-status').value;
-  data.campaigns[ci].audience = document.getElementById('ec-audience').value;
-  data.campaigns[ci].placement = document.getElementById('ec-placement').value;
+  const c = P().campaigns[ci];
+  c.name = document.getElementById('ec-name').value;
+  c.objective = document.getElementById('ec-objective').value;
+  c.startDate = document.getElementById('ec-start').value;
+  c.endDate = document.getElementById('ec-end').value;
+  c.dailyBudgetUSD = +document.getElementById('ec-budget').value;
+  c.status = document.getElementById('ec-status').value;
+  c.audience = document.getElementById('ec-audience').value;
+  c.placement = document.getElementById('ec-placement').value;
   saveData(); renderAll(); closeModal('modal-campaign');
 }
 function addAdset(ci) {
-  const maxId = Math.max(0, ...data.campaigns[ci].adsets.map(a=>a.id));
-  data.campaigns[ci].adsets.push({ id:maxId+1, name:'New AdSet', budget:'$3/day', ads:[] });
+  const adsets = P().campaigns[ci].adsets;
+  const maxId = Math.max(0, ...adsets.map(a=>a.id));
+  adsets.push({ id:maxId+1, name:'New AdSet', budget:'$3/day', ads:[] });
   saveData(); renderCampaigns();
 }
 function addAd(ci, ai) {
-  const maxId = Math.max(0, ...data.campaigns[ci].adsets[ai].ads.map(a=>a.id));
-  data.campaigns[ci].adsets[ai].ads.push({ id:maxId+1, name:'New Creative', status:'draft' });
+  const ads = P().campaigns[ci].adsets[ai].ads;
+  const maxId = Math.max(0, ...ads.map(a=>a.id));
+  ads.push({ id:maxId+1, name:'New Creative', status:'draft' });
   saveData(); renderCampaigns();
 }
 function deleteAd(ci, ai, adi) {
-  data.campaigns[ci].adsets[ai].ads.splice(adi,1);
+  P().campaigns[ci].adsets[ai].ads.splice(adi,1);
   saveData(); renderCampaigns();
 }
 function updateAdName(ci, ai, adi, val) {
-  data.campaigns[ci].adsets[ai].ads[adi].name = val; saveData();
+  P().campaigns[ci].adsets[ai].ads[adi].name = val; saveData();
 }
 function updateAdStatus(ci, ai, adi, val) {
-  data.campaigns[ci].adsets[ai].ads[adi].status = val; saveData();
+  P().campaigns[ci].adsets[ai].ads[adi].status = val; saveData();
 }
 
 /* ════════════════════════════════════════
    LEADS
 ════════════════════════════════════════ */
 function renderLeads() {
+  const proj = P();
   const ll = document.getElementById('leads-list');
-  if (data.leads.length === 0) {
+  if (proj.leads.length === 0) {
     ll.innerHTML = '<div class="empty">No leads yet. Message campaign শুরু হলে এখানে track করো।</div>';
     return;
   }
   ll.innerHTML = LEAD_STATUSES.map(st => {
-    const leads = data.leads.filter(l=>l.status===st);
+    const leads = proj.leads.filter(l=>l.status===st);
     if (!leads.length) return '';
     return `
       <div class="card">
@@ -1272,7 +1532,7 @@ function addLead() {
   const resort = document.getElementById('nl-resort').value.trim();
   const question = document.getElementById('nl-question').value.trim();
   const status = document.getElementById('nl-status').value;
-  data.leads.push({ id: Date.now(), name, resort, question, status });
+  P().leads.push({ id: Date.now(), name, resort, question, status });
   document.getElementById('nl-name').value='';
   document.getElementById('nl-resort').value='';
   document.getElementById('nl-question').value='';
@@ -1280,11 +1540,11 @@ function addLead() {
   saveData(); renderLeads(); renderDashboard();
 }
 function updateLead(id, field, val) {
-  const l = data.leads.find(x=>x.id===id);
+  const l = P().leads.find(x=>x.id===id);
   if (l) { l[field]=val; saveData(); renderLeads(); renderDashboard(); }
 }
 function deleteLead(id) {
-  data.leads = data.leads.filter(l=>l.id!==id);
+  P().leads = P().leads.filter(l=>l.id!==id);
   saveData(); renderLeads(); renderDashboard();
 }
 
@@ -1292,9 +1552,10 @@ function deleteLead(id) {
    NOTES
 ════════════════════════════════════════ */
 function renderNotes() {
+  const proj = P();
   const nl = document.getElementById('notes-list');
-  if (data.notes.length === 0) { nl.innerHTML='<div class="empty">No notes yet.</div>'; return; }
-  nl.innerHTML = [...data.notes].reverse().map(note => `
+  if (proj.notes.length === 0) { nl.innerHTML='<div class="empty">No notes yet.</div>'; return; }
+  nl.innerHTML = [...proj.notes].reverse().map(note => `
     <div class="note-card">
       <div class="section-header">
         <div class="note-date">${escHtml(note.date)}</div>
@@ -1307,12 +1568,12 @@ function renderNotes() {
 function addNote() {
   const text = document.getElementById('note-input').value.trim();
   if (!text) return;
-  data.notes.push({ id: Date.now(), text, date: new Date().toLocaleDateString('bn-BD') });
+  P().notes.push({ id: Date.now(), text, date: new Date().toLocaleDateString('bn-BD') });
   document.getElementById('note-input').value='';
   saveData(); renderNotes();
 }
 function deleteNote(id) {
-  data.notes = data.notes.filter(n=>n.id!==id);
+  P().notes = P().notes.filter(n=>n.id!==id);
   saveData(); renderNotes();
 }
 
@@ -1327,16 +1588,11 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 });
 
 /* ════════════════════════════════════════
-   UTILS
-════════════════════════════════════════ */
-function escHtml(str) {
-  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-/* ════════════════════════════════════════
    RENDER ALL
 ════════════════════════════════════════ */
 function renderAll() {
+  renderProjectSwitcher();
+  renderOverview();
   renderDashboard();
   renderTimeline();
   renderCampaigns();
@@ -1362,7 +1618,6 @@ function doLogin() {
   } else {
     errEl.style.display = 'block';
     errEl.style.animation = 'none';
-    // retrigger animation
     void errEl.offsetWidth;
     errEl.style.animation = '';
     document.getElementById('login-pass').value = '';
